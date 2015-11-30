@@ -3,7 +3,7 @@
 static Window *s_main_window;
 static AppTimer *app_timer;
 time_t now;
-struct tm *disp_time; // Time to display.
+struct tm disp_time; // Time to display.
 
 // Slot on-screen layout:
 //     0 1
@@ -92,18 +92,13 @@ static unsigned short get_display_hour(unsigned short hour) {
 }
 
 static void display_time() {
-  //APP_LOG(APP_LOG_LEVEL_INFO, "display_time:display_value");
-  display_value(get_display_hour(disp_time->tm_hour), 0, false);
-  //APP_LOG(APP_LOG_LEVEL_INFO, "display_time:display_time");
-  display_value(disp_time->tm_min, 1, true);
-  //APP_LOG(APP_LOG_LEVEL_INFO, "end display_time");
+  display_value(get_display_hour(disp_time.tm_hour), 0, false);
+  display_value(disp_time.tm_min, 1, true);
 }
 
 static void tick_handler(struct tm *tick_time, TimeUnits units_changed) {
-  //APP_LOG(APP_LOG_LEVEL_INFO, "tick_handler: %d:%d", tick_time->tm_hour, tick_time->tm_min);
-  disp_time = tick_time; // Set display time value supplied to tick_handler.
+  disp_time = *tick_time; // Set display time value supplied to tick_handler.
   display_time();
-  //APP_LOG(APP_LOG_LEVEL_INFO, "end tick_handler");
 }
 
 static void auto_redisplay_time(void *data) {
@@ -112,28 +107,21 @@ static void auto_redisplay_time(void *data) {
 }
 
 static void display_date() {
-  display_value(disp_time->tm_mday, 0, true);
-  display_value(disp_time->tm_mon+1, 1, true);
+  display_value(disp_time.tm_mday, 0, true);
+  display_value(disp_time.tm_mon+1, 1, true);
   if (app_timer != NULL) {
     app_timer_cancel(app_timer);
   }
   app_timer = app_timer_register(1000, auto_redisplay_time, NULL);
 }
 
-static void click_handler(ClickRecognizerRef recognizer, void *context) {
-  //APP_LOG(APP_LOG_LEVEL_INFO, "click_handler");
-  display_date();
-}
-
 static void tap_handler(AccelAxisType axis, int32_t direction) {
-  //APP_LOG(APP_LOG_LEVEL_INFO, "tap_handler");
   display_date();
 }
 
 static void main_window_load(Window *window) {
-  //APP_LOG(APP_LOG_LEVEL_INFO, "main_window_load");
   now = time(NULL);
-  disp_time = localtime(&now);  // First run through so set display_time.
+  disp_time = *localtime(&now);  // First run through so set display_time.
   display_time();
 }
 
@@ -143,26 +131,15 @@ static void main_window_unload(Window *window) {
   }
 }
 
-static void click_config_provider(void *context) {
-  // Register the ClickHandlers
-  window_single_click_subscribe(BUTTON_ID_UP, click_handler);
-}
-
 static void init() {
-  //APP_LOG(APP_LOG_LEVEL_INFO, "start init");
   s_main_window = window_create();
   window_set_background_color(s_main_window, GColorWhite);
   window_set_window_handlers(s_main_window, (WindowHandlers) {
     .load = main_window_load,
     .unload = main_window_unload,
   });
-  //APP_LOG(APP_LOG_LEVEL_INFO, "window_set_click_config_provider");
-  window_set_click_config_provider(s_main_window, click_config_provider);
-  //APP_LOG(APP_LOG_LEVEL_INFO, "window_stack_push");
   window_stack_push(s_main_window, true);
-  //APP_LOG(APP_LOG_LEVEL_INFO, "tick_timer_service_subscribe");
   tick_timer_service_subscribe(MINUTE_UNIT, tick_handler);
-  //APP_LOG(APP_LOG_LEVEL_INFO, "end init");
   accel_tap_service_subscribe(tap_handler);
 }
 
@@ -173,10 +150,7 @@ static void deinit() {
 }
 
 int main(void) {
-  //APP_LOG(APP_LOG_LEVEL_INFO, "init");
   init();
-  //APP_LOG(APP_LOG_LEVEL_INFO, "app_event_loop");
   app_event_loop();
-  //APP_LOG(APP_LOG_LEVEL_INFO, "deinit");
   deinit();
 }
